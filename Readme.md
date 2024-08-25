@@ -823,7 +823,7 @@ drug_lm_plt_arr[7]
 
 ![](Readme_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
-
+#
 It is clear from the residual plots that our residuals, and hence our dependent variable resistance values, are not normally distributed. Specifically, it can be seen from the 
 
 * *QQ Plot of Studentized Deleted Residuals* and *Histogram of Studentized Deleted Residuals*
@@ -1022,7 +1022,7 @@ bc_drug_lm_plt_arr[7]
 
 ![](Readme_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
 
-
+#
 These residual plots more closely align with what would be expected for normally distributed residuals, and hence normally distributed response vectors of the linear regression. Specifically,
 
 * *QQ Plot of Studentized Deleted Residuals* and *Histogram of Studentized Deleted Residuals*
@@ -1292,10 +1292,10 @@ bc_vif_res
 ## 7 SQV               4.68              1.93
 ```
 
+#
+Based on the rules for determining multicolinearity from VIF, specifically that
 
-Based on the rules established in class for determining multicolinearity from VIF, specifically that
-
-![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}\max\left\{VIF_k\right\}&\gg&space;10\\\text{or}\\\overline{VIF}_k&\gg&space;1\end{align*})
+![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}\max\{VIF_k\}&\gg&space;10\\\text{or}\\\overline{VIF}_k&\gg1\end{align*})
 
 indicate multicolinearity, it was deemed that the covariates in each drug's non Box Cox transformed and Box Cox transformed linear regressions did not show multicolinearity and no adjustment for it was made.
 
