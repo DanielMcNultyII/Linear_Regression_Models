@@ -62,7 +62,10 @@ gene_df = gene_df[valid_rows,]
 We now construct the design matrix $X$ and matrix of response vectors $Y$. The features (columns of $X$) are given by mutation/position pairs. Define
 
 $$
-X_{i,j} = 1 \text{ if the } i \text{th patient has the } j \text{th mutation/position pair and 0 otherwise} \\
+X_{i,j} = 1 \text{ if the } i \text{th patient has the } j \text{th mutation/position pair and 0 otherwise}
+$$
+
+$$
 Y_{i,k} = \text{resistance of patient } i \text{ to drug } k. 
 $$
 
@@ -93,8 +96,7 @@ Y = gene_df[,4:(pos_start-1)]
 
 An excerpt of the design matrix is shown below. By construction, every column contains at least one 1, but the matrix is still quite sparse with the relative frequency of 1’s being about 0.025.
 ```{r, warning=FALSE, error=FALSE}
-library(DT)
-datatable(data.frame(X)[1:10, ], options = list(scrollX=T, pageLength = 10))
+data.frame(X)[1:10, ]
 ```
 
 The response matrix looks like:
@@ -197,7 +199,7 @@ while using minimum Mallow's $C_p$ as our criterion for model selection yields t
 opt_mdl_pos_cp
 ```
 
-#### Problems with Initial Selection of Best Subset using regsubsets() {.tabset .tabset-fade}
+#### Problems with Initial Selection of Best Subset using regsubsets()
 
 Before moving onto evaluating these results, it is necessary to look at the residual plots generated from producing a linear regression of the resistance response vector y of each drug to our design matrix of position-mutation pairs.  
 ```{r, warning=FALSE, error=FALSE, message=FALSE}
@@ -313,7 +315,6 @@ drug_lm_plt_arr[6]
 drug_lm_plt_arr[7]
 ```
 
-#
 
 It is clear from the residual plots that our residuals, and hence our dependent variable resistance values, are not normally distributed. Specifically, it can be seen from the 
 
@@ -328,7 +329,7 @@ It is clear from the residual plots that our residuals, and hence our dependent 
 The *Line Plot of Studentized Deleted Residuals* shows that there is not a bias in the order in which the data was taken.
 
 
-#### Box Cox Transforming the Linear Regressions of the Resistance Response Vectors against the Design Matrix of Position-Mutation Pairs {.tabset .tabset-fade}
+#### Box Cox Transforming the Linear Regressions of the Resistance Response Vectors against the Design Matrix of Position-Mutation Pairs
 
 In order to make the dependent variable resistances linear, a Box Cox transformation was determined for each resistance response vector and the linear regression model based on this transform was created for each resistance response vector. The residual plots for these Box Cox transformed linear regressions were then created.
 
@@ -463,7 +464,6 @@ bc_drug_lm_plt_arr[6]
 bc_drug_lm_plt_arr[7]
 ```
 
-#
 
 These residual plots more closely align with what would be expected for normally distributed residuals, and hence normally distributed response vectors of the linear regression. Specifically,
 
@@ -629,37 +629,28 @@ for(drug in names(Y)){
 init_vif_res = tibble('Drug'=names(Y),
                     'Sample Max VIF'=unlist(init_max_vif),
                     'Sample Mean VIF'=unlist(init_mean_vif))
-# Show the dataframe bc_vif_res as a datatable
-init_col_dt = datatable(init_vif_res)
 
 # Create a dataframe for the max and mean of the bc_vif values for each drug
 bc_vif_res = tibble('Drug'=names(Y),
                     'Sample Max VIF'=unlist(bc_max_vif),
                     'Sample Mean VIF'=unlist(bc_mean_vif))
-# Show the dataframe bc_vif_res as a datatable
-bc_col_dt = datatable(bc_vif_res)
 ```
 
 ##### Before Box Cox Transformation
 ```{r}
-init_col_dt
+init_vif_res
 ```
 
 ##### After Box Cox Transformation
 ```{r}
-bc_col_dt
+bc_vif_res
 ```
 
-#
 
 Based on the rules established in class for determining multicolinearity from VIF, specifically that
-$$
-\begin{align*}
-\max\left\{VIF_k\right\} &\gg 10 \\
-\text{or} \\
-\overline{VIF}_k &\gg 1
-\end{align*}
-$$
+
+![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}\max\left\{VIF_k\right\}&\gg&space;10\\\text{or}\\\overline{VIF}_k&\gg&space;1\end{align*})
+
 indicate multicolinearity, it was deemed that the covariates in each drug's non Box Cox transformed and Box Cox transformed linear regressions did not show multicolinearity and no adjustment for it was made.
 
 ### Evaluating the Results ###
@@ -865,35 +856,16 @@ ggplot(tot_preds, aes(x=Criterion, y=Total, fill=Selection)) +
   theme_light()
 ```
 ```{r}
-# Create a table format for the total results
-sketch = htmltools::withTags(table(
-  class = 'cell-border',
-  thead(
-    tr(
-      th(rowspan=2, 'Drug'),
-      lapply(unique(tot_preds$Criterion), function(x) th(colspan=3, x))
-    ),
-    tr(
-      lapply(rep(c('Correct', 'Incorrect', 'Correct/Total Selected'), 2), th)
-    )
-  )
-))
-
-# Show the total results as a datatable
-datatable(tot_res_dt, container = sketch, 
-          options=list(scrollX=TRUE), rownames=tot_res_dt$Model,
-          caption='Comparing the Total Covariate Positions Selected by Both Criterion Before and After Box Cox Transformation')
+# Show the total results
+tot_res_dt
 ```
 
 It is known from there being non-normality and heteroscedasticity in the residuals that there are problems obtaining p values from the linear regressions obtained prior to the Box Cox transformation. Specifically, the error in the models produced before the Box Cox transformation is not consistent across the entire range of data used for each model, leading to the amount of predictive ability any covariate has being inconsistent across the entire range of data as well. As a result, position covariates that in reality could have very little predictive ability could still have low p values and be seen as significant in the model.
 
 From both plots, it is shown that BIC is more selective in which covariates it deems significant than Mallow's $C_p$ is. A reason why can be seen within their formulae
-$$
-\begin{align*}
-C_p &= \frac{1}{n}\left(\text{RSS} + 2p\hat{\sigma}^2\right) \\
-\text{BIC} &= \frac{1}{n}\left(\text{RSS}+\log(n)p\hat{\sigma}^2\right)
-\end{align*}
-$$
+
+![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}C_p&=\frac{1}{n}\left(\text{RSS}&plus;2p\hat{\sigma}^2\right)\\\text{BIC}&=\frac{1}{n}\left(\text{RSS}&plus;\log(n)p\hat{\sigma}^2\right)\end{align*})
+
 where $n$ is the number of covariates in the model of interest. It is established in these formulae that BIC has a greater penalty for adding more covariates into a model, with the use of the $\log(n)$ term to scale $p\hat{\sigma}^2$ with each added covariate while the Mallows $C_p$ uses a constant $2$ to scale $p\hat{\sigma}^2$.
 
 ### Conclusion ###
@@ -947,40 +919,14 @@ plot_grid(g0, g2, nrow=1) +
   draw_figure_label('Criterion', position = 'bottom')
 ```
 
-```{r, warning=FALSE, error=FALSE, message=FALSE}
-# Create a table format for the results per drug
-sketch = htmltools::withTags(table(
-  class = 'cell-border',
-  thead(
-    tr(
-      th(rowspan=2, 'Drug'),
-      lapply(unique(init_regsub_res_df$Criterion), function(x) th(colspan=3, x))
-    ),
-    tr(
-      lapply(rep(c('Correct', 'Incorrect', 'Correct/Total Selected'), 2), th)
-    )
-  )
-))
-
-# Create a datatable for the results per drug prior to Box Cox transform
-init_dt <- datatable(init_regsub_res_dt[,2:ncol(init_regsub_res_dt)], container = sketch, 
-                     options=list(scrollX=TRUE), rownames=init_regsub_res_dt$Drug,
-                     caption='Comparing the Covariate Positions Chosen Prior to Box Cox Transform')
-
-# Create a datatable for the results per drug after Box Cox transform
-bc_dt <- datatable(bc_regsub_res_dt[,2:ncol(bc_regsub_res_dt)], container = sketch, 
-                   options=list(scrollX=TRUE), rownames=bc_regsub_res_dt$Drug,
-                   caption='Comparing the Covariate Positions Chosen After the Box Cox Transform')
-```
-
 #### Before Box Cox Transform
 ```{r}
-init_dt
+init_regsub_res_dt[,2:ncol(init_regsub_res_dt)]
 ```
 
 #### After Box Cox Transform
 ```{r}
-bc_dt
+bc_regsub_res_dt[,2:ncol(bc_regsub_res_dt)]
 ```
 
 ### Appendix 2: Bonferroni Correction to p-Values of t-Tests
