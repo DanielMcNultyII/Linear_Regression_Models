@@ -1529,7 +1529,7 @@ It is known from there being non-normality and heteroscedasticity in the residua
 
 From both plots, it is shown that BIC is more selective in which covariates it deems significant than Mallow's $C_p$ is. A reason why can be seen within their formulae
 
-![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}C_p&=\frac{1}{n}\left(\text{RSS}&plus;2p\hat{\sigma}^2\right)\\BIC&=\frac{1}{n}\left(\text{RSS}&plus;\log(n)p\hat{\sigma}^2\right)\end{align*})
+![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}C_p&=\frac{1}{n}\left(\text{RSS}&plus;2p\hat{\sigma}^2\right\)\\BIC&=\frac{1}{n}\left(\text{RSS}&plus;\log(n)p\hat{\sigma}^2\right)\end{align*})
 
 where $n$ is the number of covariates in the model of interest. It is established in these formulae that BIC has a greater penalty for adding more covariates into a model, with the use of the $\log(n)$ term to scale $p\hat{\sigma}^2$ with each added covariate while the Mallows $C_p$ uses a constant $2$ to scale $p\hat{\sigma}^2$.
 
