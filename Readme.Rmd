@@ -647,9 +647,9 @@ bc_vif_res
 ```
 
 #
-Based on the rules for determining multicolinearity from VIF, specifically that
+Determining multicolinearity from VIF using the following standards:
 
-![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}\max\{VIF_k\}&\gg&space;10\\\text{or}\\\overline{VIF}_k&\gg1\end{align*})
+![](https://latex.codecogs.com/svg.image?\bg{white}\begin{align*}\max\{VIF_k\}&\gg&space;10\\or\\\text{mean}\{VIF_k\}&\gg1\end{align*})
 
 indicate multicolinearity, it was deemed that the covariates in each drug's non Box Cox transformed and Box Cox transformed linear regressions did not show multicolinearity and no adjustment for it was made.
 
