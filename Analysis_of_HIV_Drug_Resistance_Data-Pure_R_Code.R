@@ -1,52 +1,17 @@
----
-title: "Linear Regression Models: Revised Final Project"
-author: 'Daniel McNulty II'
-date: 'December 21, 2019'
-output:
-  html_document: default
-  html_notebook: default
-  pdf_document: default
----
-
-## Analysis of HIV Drug Resistance Data ###
-The scientific goal is to determine which mutations of the Human Immunodeficiency Virus Type 1 (HIV-1) are associated with drug resistance. The data set, publicly available from the Stanford HIV Drug Resistance Database <http://hivdb.stanford.edu/pages/published_analysis/genophenoPNAS2006/>, was originally analyzed in (Rhee et al. 2006). 
-
-### Preparing the Data ###
-The data set consists of measurements for three classes of drugs: protease inhibitors (PIs), nucleoside reverse transcriptase (RT) inhibitors (NRTIs), and nonnucleoside RT inhibitors (NNRTIs). Protease and reverse transcriptase are two enzymes in HIV-1 that are crucial to the function of the virus. This data set seeks associations between mutations in the HIV-1 protease and drug resistance to different PI type drugs, and between mutations in the HIV-1 reverse transcriptase and drug resistance to different NRTI and NNRTI type drugs (The raw data are saved as `gene_df`).
-
-In order to evaluate our results, we compare with the treatment-selected mutation panels created by (Rhee et al. 2005), which can be viewed as the ground true. These panels give lists of HIV-1 mutations appearing more frequently in patients who have previously been treated with PI, NRTI, or NNRTI type drugs, than in patients with no previous exposure to that drug type. Increased frequency of a mutation among patients treated with a certain drug type implies that the mutation confers resistance to that drug type (The raw data are saved as `tsm_df`).
-
-To simplify the analysis, in this project we will confine our attention to the PI drugs.
-```{r, warning=FALSE, error=FALSE}
 drug_class = 'PI' # Possible drug types are 'PI', 'NRTI', and 'NNRTI'. 
-```
 
-### Fetching and Cleaning the Data ##
-First, we download the data and read it into data frames.
-
-
-```{r, warning=FALSE, error=FALSE}
-base_url = 'http://hivdb.stanford.edu/pages/published_analysis/genophenoPNAS2006'
+base_url = 'https://hivdb.stanford.edu/_wrapper/pages/published_analysis/genophenoPNAS2006'
 gene_url = paste(base_url, 'DATA', paste0(drug_class, '_DATA.txt'), sep='/')
 tsm_url = paste(base_url, 'MUTATIONLISTS', 'NP_TSM', drug_class, sep='/')
 
 gene_df = read.delim(gene_url, na.string = c('NA', ''), stringsAsFactors = FALSE)
 tsm_df = read.delim(tsm_url, header = FALSE, stringsAsFactors = FALSE)
 names(tsm_df) = c('Position', 'Mutations')
-```
 
-A small sample of the data is shown below.
-```{r, warning=FALSE, error=FALSE}
 head(gene_df, n=6)
-```
 
-```{r, warning=FALSE, error=FALSE}
 head(tsm_df, n=6)
-```
-In `tsm_df`, the variable `Position` denotes the position of the mutations that are associated with drug-resistance, while `Mutations` indicating the mutation type.
 
-The gene data table has some rows with error flags or nonstandard mutation codes. For simplicity, we remove all such rows.
-```{r, warning=FALSE, error=FALSE}
 # Returns rows for which every column matches the given regular expression.
 grepl_rows <- function(pattern, df) {
   cell_matches = apply(df, c(1,2), function(x) grepl(pattern, x))
@@ -57,18 +22,7 @@ pos_start = which(names(gene_df) == 'P1')
 pos_cols = seq.int(pos_start, ncol(gene_df))
 valid_rows = grepl_rows('^(\\.|-|[A-Zid]+)$', gene_df[,pos_cols])
 gene_df = gene_df[valid_rows,]
-```
 
-### Preparing the Regression Matrix ##
-We now construct the design matrix $X$ and matrix of response vectors $Y$. The features (columns of $X$) are given by mutation/position pairs. Define
-
-$$
-X_{i,j} = 1 \text{ if the } i \text{th patient has the } j \text{th mutation/position pair and 0 otherwise} \\
-Y_{i,k} = \text{resistance of patient } i \text{ to drug } k. 
-$$
-
-For example, in the sample for PI type drugs, three different mutations (A, C, and D) are observed at position 63 in the protease, and so three columns of $X$ (named P63.A, P63.C, and P63.D) indicate the presence or absence of each mutation at this position.
-```{r, warning=FALSE, error=FALSE}
 # Flatten a matrix to a vector with names from concatenating row/column names.
 flatten_matrix <- function(M, sep='.') {
   x <- c(M)
@@ -90,33 +44,12 @@ X = X[,colSums(X) != 0]
 
 # Extract response matrix.
 Y = gene_df[,4:(pos_start-1)]
-```
 
-An excerpt of the design matrix is shown below. By construction, every column contains at least one 1, but the matrix is still quite sparse with the relative frequency of 1’s being about 0.025.
-```{r, warning=FALSE, error=FALSE}
 library(DT)
 datatable(data.frame(X)[1:10, ], options = list(scrollX=T, pageLength = 10))
-```
 
-The response matrix looks like:
-```{r, warning=FALSE, error=FALSE}
 head(Y, n=6)
-```
 
-There are 7 PI-type drugs: APV, ATV, IDV, LPV, NFV, RTV, and SQV.
-
-### Selecting Drug-Resistance-Associated Mutations
-
-In this step, you need to build an appropriate linear regression model, and use the method we discussed in lecture to select mutations that may associated with drug-resistance. For 7 PI-type drugs, you need to run a seperate analysis for each drug.
-
-Notice that there are some missing values.
-
-Before building the model, we need to perform some final pre-processing steps. We remove rows with missing values (which vary from drug to drug) and we then further reduce the design matrix by removing predictor columns for mutations that do not appear at least three times in the sample. Finally, for identifiability, we remove any columns that are duplicates (i.e. two mutations that appear only in tandem, and therefore we cannot distinguish between their effects on the response).
-
-#### Initial Selection of Best Subset using regsubsets()
-
-Initially, predictors were chosen from regression of the actual, unmodified y vector on the design matrix X using the regsubsets() function to perform a backward stepwise selection. Models which produced the lowest BIC and Mallow's $C_p$ values were then chosen and the predictors in each model were recorded. Then, the positions indicated by selected predictors were taken, as we are told in the project prompt that we only need to compare the position of the mutations, not the mutation type. This is because it is known that multiple mutations at the same protease or RT position can often be associated with related drug-resistance outcomes.
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Load the leaps library and tidyverse set of libraries
 library(leaps)
 library(tidyverse)
@@ -187,21 +120,11 @@ for(drug in names(Y)){
   # Remove NA values from the vector of positions
   opt_mdl_pos_cp[[drug]] = opt_mdl_pos_cp[[drug]][!is.na(opt_mdl_pos_cp[[drug]])]
 }
-```
 
-In this case, using minimum BIC as our criterion for model selection yields the following significant positions for each PI drug
-```{r}
 opt_mdl_pos_bic
-```
-while using minimum Mallow's $C_p$ as our criterion for model selection yields the following significant positions for each PI drug
-```{r}
+
 opt_mdl_pos_cp
-```
 
-#### Problems with Initial Selection of Best Subset using regsubsets() {.tabset .tabset-fade}
-
-Before moving onto evaluating these results, it is necessary to look at the residual plots generated from producing a linear regression of the resistance response vector y of each drug to our design matrix of position-mutation pairs.  
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Load the cowplot library
 library(cowplot)
 
@@ -277,63 +200,21 @@ for(drug in names(Y)){
   drug_lm_plt_arr[[drug]] <- plot_grid(p1, p2, p3, p4, nrow=2, ncol=2) +
     draw_figure_label(paste(c(drug, '\n'), collapse=''), position = "top", size=12, fontface='bold')
 }
-```
 
-##### APV
-```{r}
 drug_lm_plt_arr[1]
-```
 
-##### ATV
-```{r}
 drug_lm_plt_arr[2]
-```
 
-##### IDV
-```{r}
 drug_lm_plt_arr[3]
-```
 
-##### LPV
-```{r}
 drug_lm_plt_arr[4]
-```
 
-##### NFV
-```{r}
 drug_lm_plt_arr[5]
-```
 
-##### RTV
-```{r}
 drug_lm_plt_arr[6]
-```
 
-##### SQV
-```{r}
 drug_lm_plt_arr[7]
-```
 
-#
-
-It is clear from the residual plots that our residuals, and hence our dependent variable resistance values, are not normally distributed. Specifically, it can be seen from the 
-
-* *QQ Plot of Studentized Deleted Residuals* and *Histogram of Studentized Deleted Residuals*
-  * Residuals are over-dispersed relative to a normal distribution
-  * Residuals appear to be right skewed
-
-* *Studentized Deleted Residuals vs Predicted Resistance*
-  * Points do not scatter randomly around the 0 line, so we cannot assume the relationship is linear
-  * Residuals do not form a horizontal band around the 0 line, suggesting the variances of the error terms aren’t equal, and thus the presence of heteroscedasticity
-
-The *Line Plot of Studentized Deleted Residuals* shows that there is not a bias in the order in which the data was taken.
-
-
-#### Box Cox Transforming the Linear Regressions of the Resistance Response Vectors against the Design Matrix of Position-Mutation Pairs {.tabset .tabset-fade}
-
-In order to make the dependent variable resistances linear, a Box Cox transformation was determined for each resistance response vector and the linear regression model based on this transform was created for each resistance response vector. The residual plots for these Box Cox transformed linear regressions were then created.
-
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Load the MASS library
 library(MASS)
 
@@ -427,62 +308,21 @@ for(drug in names(Y)){
   bc_drug_lm_plt_arr[[drug]] <- plot_grid(p1, p2, p3, p4, nrow=2, ncol=2) +
     draw_figure_label(paste(c(drug, '\n'), collapse=''), position = "top", size=12, fontface='bold')
 }
-```
 
-##### APV
-```{r}
 bc_drug_lm_plt_arr[1]
-```
 
-##### ATV
-```{r}
 bc_drug_lm_plt_arr[2]
-```
 
-##### IDV
-```{r}
 bc_drug_lm_plt_arr[3]
-```
 
-##### LPV
-```{r}
 bc_drug_lm_plt_arr[4]
-```
 
-##### NFV
-```{r}
 bc_drug_lm_plt_arr[5]
-```
 
-##### RTV
-```{r}
 bc_drug_lm_plt_arr[6]
-```
 
-##### SQV
-```{r}
 bc_drug_lm_plt_arr[7]
-```
 
-#
-
-These residual plots more closely align with what would be expected for normally distributed residuals, and hence normally distributed response vectors of the linear regression. Specifically,
-
-* *QQ Plot of Studentized Deleted Residuals* and *Histogram of Studentized Deleted Residuals*
-  * Residuals more closely fall into the quantiles expected for a normal distribution on the QQ plot
-  * The histogram of residuals follows the bell-shaped curve expected of a normal distribution more closely, with less dispersion
-
-* *Studentized Deleted Residuals vs Predicted Resistance*
-  * Points scatter randomly around the 0 line, so we can reasonably assume the relationship is linear
-  * Residuals form a horizontal band around the 0 line, suggesting the variances of the error terms are equal, and hence the presence of homoscedasticity
-
-The *Line Plot of Studentized Deleted Residuals* shows that there is not a bias in the order in which the data was taken.
-
-#### Selection of Best Subset using regsubsets() after Box Cox transformation 
-
-Here, predictors were chosen from regression of the Box Cox transformed y vector on the design matrix X using the regsubsets() function to perform a backward stepwise selection. Models which produced the lowest BIC and Mallow's $C_p$ values were then chosen and the predictors in each model were recorded. Then, the positions indicated by selected predictors were taken, as we are told in the project prompt that we only need to compare the position of the mutations, not the mutation type. This is because it is known that multiple mutations at the same protease or RT position can often be associated with related drug-resistance outcomes.
-
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Initialize empty lists to hold
 #   - bc_regsub: The result of using regsub on the Box Cox transformed
 #                linear regression of resistance response vector against 
@@ -556,21 +396,11 @@ for(drug in names(Y)){
   # Remove NA values from the vector of positions
   bc_opt_mdl_pos_cp[[drug]] = bc_opt_mdl_pos_cp[[drug]][!is.na(bc_opt_mdl_pos_cp[[drug]])]
 }
-```
 
-In this case, using minimum BIC as our criterion for model selection yields the following significant positions for each PI drug
-```{r}
 bc_opt_mdl_pos_bic
-```
-while using minimum Mallow's $C_p$ as our criterion for model selection yields the following significant positions for each PI drug
-```{r}
+
 bc_opt_mdl_pos_cp
-```
 
-#### Testing for Multicolinearity {.tabset .tabset-fade}
-
-Below are the results of testing for colinearity within the Box Cox transformed linear regression of the resistance response vector and design matrix for each drug using the variance inflation factor (VIF). The values are the same for both the linear regressions that were not and were transformed using Box Cox transformation.
-```{r, warning=FALSE, message=FALSE}
 # Load the car library
 library(car)
 # Initialize lists to hold:
@@ -615,7 +445,7 @@ for(drug in names(Y)){
   # If the optimal lambda is 0, then use vif() on the linear regression of the natural log of the resistance 
   # response vector against the design matrix for each drug. Otherwise, use vif() on the linear regression 
   # of the resistance response vector to the power of lambda against the design matrix for each drug.
-  if(bac.lambda==0){
+  if(bac.lambda[[drug]]==0){
     bc_vif[[drug]] = vif(lm(log(y)~., data=data.frame(x)))
   } else {
     bc_vif[[drug]] = vif(lm((y**bac.lambda[[drug]])~., data=data.frame(x)))
@@ -639,39 +469,11 @@ bc_vif_res = tibble('Drug'=names(Y),
                     'Sample Mean VIF'=unlist(bc_mean_vif))
 # Show the dataframe bc_vif_res as a datatable
 bc_col_dt = datatable(bc_vif_res)
-```
 
-##### Before Box Cox Transformation
-```{r}
 init_col_dt
-```
 
-##### After Box Cox Transformation
-```{r}
 bc_col_dt
-```
 
-#
-
-Based on the rules established in class for determining multicolinearity from VIF, specifically that
-$$
-\begin{align*}
-\max\left\{VIF_k\right\} &\gg 10 \\
-\text{or} \\
-\overline{VIF}_k &\gg 1
-\end{align*}
-$$
-indicate multicolinearity, it was deemed that the covariates in each drug's non Box Cox transformed and Box Cox transformed linear regressions did not show multicolinearity and no adjustment for it was made.
-
-### Evaluating the Results ###
-
-In this case, we are fortunate enough to have a “ground truth” obtained by another experiment  (data saved as `tsm_df`). Using this, we can evaluate the selected results. Note that we only need to compare the position of the mutations, not the mutation type. This is because it is known that multiple mutations at the same protease or RT position can often be associated with related drug-resistance outcomes.
-
-#### Code to Evaluate the Results
-The code below generates a dataframe containing the total positions selected by regsubsets() before and after the Box Cox transform, as well as a dataframe containing the positions selected by regsubsets() before and after the Box Cox transform for each drug. The total positions selected by regsubsets() before and after the Box Cox transform consists of all the unique positions indicated by each drug combined into one vector of positions for each Criterion (Mallow's Cp and BIC) and each of the before and after Box Cox transformation linear regressions.
-
-The results for the total positions selected are shown and visualized in the next subsection, while the results for the positions selected for each drug are in the appendix.
-```{r}
 # Initialize lists to hold
 #   - init_total_cp_pred_pos: All positions selected by the regsubsets() subset with the
 #                             lowest Mallows Cp value before Box Cox transform
@@ -793,7 +595,7 @@ tot_preds <- tibble('Model'=c('Before_Box_Cox','Before_Box_Cox','Before_Box_Cox'
 tot_res_dt <- tot_preds %>%
   group_by(Model) %>%
   mutate(Crit_Pred = paste0(Criterion, '_', Selection)) %>%
-  pivot_wider(id_cols=c(Model, Crit_Pred, Total), names_from=Crit_Pred, values_from=Total) %>%
+  pivot_wider(id_cols=c(Model), names_from=Crit_Pred, values_from=Total) %>%
   mutate(Mallows_Cp_Precision = round(Mallows_Cp_Correct/sum(Mallows_Cp_Correct, Mallows_Cp_Incorrect), 2),
          BIC_Precision = round(BIC_Correct/sum(BIC_Correct, BIC_Incorrect), 2)) %>%
   dplyr::select(Model, BIC_Correct, BIC_Incorrect, BIC_Precision, 
@@ -814,7 +616,7 @@ init_regsub_res_df = init_regsub_res_df %>%
 init_regsub_res_dt <- init_regsub_res_df %>%
   group_by(Drug) %>%
   mutate(Crit_Pred = paste0(Criterion, '_', Selection)) %>%
-  pivot_wider(id_cols=c(Drug, Crit_Pred, Total), names_from=Crit_Pred, values_from=Total) %>%
+  pivot_wider(id_cols=c(Drug), names_from=Crit_Pred, values_from=Total) %>%
   mutate(Mallows_Cp_Precision = round(Mallows_Cp_Correct/sum(Mallows_Cp_Correct, Mallows_Cp_Incorrect), 2),
          BIC_Precision = round(BIC_Correct/sum(BIC_Correct, BIC_Incorrect), 2)) %>%
   dplyr::select(Drug, BIC_Correct, BIC_Incorrect, BIC_Precision, 
@@ -835,17 +637,12 @@ bc_regsub_res_df = bc_regsub_res_df %>%
 bc_regsub_res_dt <- bc_regsub_res_df %>%
   group_by(Drug) %>%
   mutate(Crit_Pred = paste0(Criterion, '_', Selection)) %>%
-  pivot_wider(id_cols=c(Drug, Crit_Pred, Total), names_from=Crit_Pred, values_from=Total) %>%
+  pivot_wider(id_cols=c(Drug), names_from=Crit_Pred, values_from=Total) %>%
   mutate(Mallows_Cp_Precision = round(Mallows_Cp_Correct/sum(Mallows_Cp_Correct, Mallows_Cp_Incorrect), 2),
          BIC_Precision = round(BIC_Correct/sum(BIC_Correct, BIC_Incorrect), 2))  %>%
   dplyr::select(Drug, BIC_Correct, BIC_Incorrect, BIC_Precision, 
                 Mallows_Cp_Correct, Mallows_Cp_Incorrect, Mallows_Cp_Precision)
-```
 
-#### Visualization and Discussion of the Total Positions Selected
-
-First, stacked bar plots were created to visualize the overall results of the linear models created above.
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Generate a stacked bar plot to visualize the correct and incorrect Selections by
 # criterion per model (Before or After Box Cox transform)
 ggplot(tot_preds, aes(x=Criterion, y=Total, fill=Selection)) +
@@ -864,8 +661,6 @@ ggplot(tot_preds, aes(x=Criterion, y=Total, fill=Selection)) +
        y='Number of Selected Significant Positions') +
   facet_wrap(~Model) +
   theme_light()
-```
-```{r}
 # Create a table format for the total results
 sketch = htmltools::withTags(table(
   class = 'cell-border',
@@ -884,37 +679,7 @@ sketch = htmltools::withTags(table(
 datatable(tot_res_dt, container = sketch, 
           options=list(scrollX=TRUE), rownames=tot_res_dt$Model,
           caption='Comparing the Total Covariate Positions Selected by Both Criterion Before and After Box Cox Transformation')
-```
 
-It is known from there being non-normality and heteroscedasticity in the residuals that there are problems obtaining p values from the linear regressions obtained prior to the Box Cox transformation. Specifically, the error in the models produced before the Box Cox transformation is not consistent across the entire range of data used for each model, leading to the amount of predictive ability any covariate has being inconsistent across the entire range of data as well. As a result, position covariates that in reality could have very little predictive ability could still have low p values and be seen as significant in the model.
-
-From both plots, it is shown that BIC is more selective in which covariates it deems significant than Mallow's $C_p$ is. A reason why can be seen within their formulae
-$$
-\begin{align*}
-C_p &= \frac{1}{n}\left(\text{RSS} + 2p\hat{\sigma}^2\right) \\
-\text{BIC} &= \frac{1}{n}\left(\text{RSS}+\log(n)p\hat{\sigma}^2\right)
-\end{align*}
-$$
-where $n$ is the number of covariates in the model of interest. It is established in these formulae that BIC has a greater penalty for adding more covariates into a model, with the use of the $\log(n)$ term to scale $p\hat{\sigma}^2$ with each added covariate while the Mallows $C_p$ uses a constant $2$ to scale $p\hat{\sigma}^2$.
-
-### Conclusion ###
-Ultimately, this project showed the result of using the stepwise backward in conjunction with variable selection criterion to determine the positions significant towards protease inhibitor drug resistance. While this method was able to select a large majority of the positions within the ground true list of positions, it was highly susceptible to false positives both before and after transforming the data using Box Cox transformation.
-
-### Future Work ###
-In the future, an inference-oriented approach such as applying Bonferroni correction to p-values of t-tests to control family-wise error rate (FWER) would be recommended. The foundation of typical statistical hypothesis tests is the rejection of a null hypothesis if the likelihood of observed data is under a certain threshold under the null hypothesis; however, when testing multiple hypotheses the probability of a rare event rises and so the likelihood of rejecting the null hypothesis rises accordingly. Bonferroni correction accounts for this rise by testing each individual hypothesis at a significance level of $\frac{\alpha}{n}$ where $\alpha$ is the significance level and $n$ is the number of hypotheses being tested. This should decrease the number of false positives as the threshold to reject the null hypothesis and declare a position significant is lowered; yet, because of this same reasoning, this method should also increase the number of falsely rejected positions.
-
-Another method which allows for control over the false discovery rate is the Benjamini-Hochberg procedure. This procedure first sorts and ranks the p-values of each position, with the smallest p-value getting rank $1$, second smallest p-value getting rank $2$, and so on till the highest p-value gets rank $n$, where n is the number of hypotheses being tested. Then, the highest rank $m$ where $P_{m} \le \alpha \frac{m}{n}$ is satisfied is found and all null hypotheses of p-values with rank less than or equal to m are rejected.
-
-These methods are explored in *Appendices 2 and 3*.
-
-### References ###
-
-Rhee, Soo-Yon, W Jeffrey Fessel, Andrew R Zolopa, Leo Hurley, Tommy Liu, Jonathan Taylor, Dong Phuong Nguyen, et al. 2005. “HIV-1 Protease and Reverse-Transcriptase Mutations: correlations with Antiretroviral Therapy in Subtype B Isolates and Implications for Drug-Resistance Surveillance.” _Journal of Infectious Diseases 192 (3). Oxford University Press: 456–65_.
-
-Rhee, Soo-Yon, Jonathan Taylor, Gauhar Wadhera, Asa Ben-Hur, Douglas L Brutlag, and Robert W Shafer. 2006. “Genotypic Selectors of Human Immunodeficiency Virus Type 1 Drug Resistance.” _Proceedings of the National Academy of Sciences 103 (46). National Academy of Sciences: 17355–60_.
-
-### Appendix 1: Visualization of the Positions Selected by Drug {.tabset .tabset-fade}
-```{r, fig.width=8, fig.height=11, warning=FALSE, error=FALSE}
 # Generate a stacked bar plot to visualize the correct and incorrect Selections by
 # criterion per drug from before the Box Cox Transform
 g0 <- ggplot(init_regsub_res_df, aes(x=Criterion, y=Total, fill=Selection)) +
@@ -946,9 +711,7 @@ g2 <- ggplot(bc_regsub_res_df, aes(x=Criterion, y=Total, fill=Selection)) +
 # Show the two plots created above side-by-side
 plot_grid(g0, g2, nrow=1) + 
   draw_figure_label('Criterion', position = 'bottom')
-```
 
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Create a table format for the results per drug
 sketch = htmltools::withTags(table(
   class = 'cell-border',
@@ -972,21 +735,11 @@ init_dt <- datatable(init_regsub_res_dt[,2:ncol(init_regsub_res_dt)], container 
 bc_dt <- datatable(bc_regsub_res_dt[,2:ncol(bc_regsub_res_dt)], container = sketch, 
                    options=list(scrollX=TRUE), rownames=bc_regsub_res_dt$Drug,
                    caption='Comparing the Covariate Positions Chosen After the Box Cox Transform')
-```
 
-#### Before Box Cox Transform
-```{r}
 init_dt
-```
 
-#### After Box Cox Transform
-```{r}
 bc_dt
-```
 
-### Appendix 2: Bonferroni Correction to p-Values of t-Tests
-The code below first genertates the Box Cox transformed linear regressions of the drug resistance respose vector to the design matrix of position-mutation pairs for each drug, takes the p-values for each position-mutation pair coefficient from the summary() of each linear regression made, performs the Bonferroni correction to these p-Values, and then records all the position-mutation pairs with Bonferroni corrected p-values that are less than $\alpha$, which was set to $0.05$ for this project. Then, the positions of these selected position-mutation pairs were recorded, as we are told in the project prompt that we only need to compare the position of the mutations, not the mutation type. This is because it is known that multiple mutations at the same protease or RT position can often be associated with related drug-resistance outcomes.
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Initialize empty lists to hold
 #   - bc_regsub_bf: The result of using regsub on the Box Cox transformed
 #                   linear regression of resistance response vector against 
@@ -1043,10 +796,7 @@ for(drug in names(Y)){
 }
 
 bf_sel_pos
-```
 
-The below code checks to see how many of the positions selected above are in the ground true list of significant positions and then plots the result.
-```{r}
 # Combine all unique selected positions into one vector
 all_bf_pos = unlist(bf_sel_pos) %>%
   unname() %>%
@@ -1077,13 +827,7 @@ ggplot(bf_df, aes(x=Method, y=Total, fill=Selection)) +
        x='Method',
        y='Number of Selected Significant Positions') +
   theme_light()
-```
 
-The ability of the Boneferri correction to limit false positives is immediately apparent by looking at the plot, as the number of incorrect position selections is significantly less than the number of correct position selections. Further, the number of incorrect position selections after the Bonferroni correction are significantly less than those from the stepwise selection using either criterion (Mallows Cp or BIC) before or after Box Cox transform. At the same time, the number of false negatives also clearly increases as the Bonferroni correction number of correct position selections is less than those from the stepwise selection using either criterion (Mallows Cp or BIC) before or after Box Cox transform. Both these results were to be expected, as the threshold to reject the null hypothesis and declare a position significant is lowered using the Bonferroni correction.
-
-### Appendix 3: Benjamini-Hochberg Procedure
-The code below first genertates the Box Cox transformed linear regressions of the drug resistance respose vector to the design matrix of position-mutation pairs for each drug, takes the p-values for each position-mutation pair coefficient from the summary() of each linear regression made, performs the Benjamini-Hochberg procedure adjustment on these p-Values, and then records all the position-mutation pairs with Benjamini-Hochberg adjusted p-values that are less than $\alpha$, which was set to $0.05$ for this project. Then, the positions of these selected position-mutation pairs were recorded, as we are told in the project prompt that we only need to compare the position of the mutations, not the mutation type. This is because it is known that multiple mutations at the same protease or RT position can often be associated with related drug-resistance outcomes.
-```{r, warning=FALSE, error=FALSE, message=FALSE}
 # Initialize empty lists to hold
 #   - bc_regsub_bh: The result of using regsub on the Box Cox transformed
 #                   linear regression of resistance response vector against 
@@ -1140,10 +884,7 @@ for(drug in names(Y)){
 }
 
 bh_sel_pos
-```
 
-The below code checks to see how many of the positions selected above are in the ground true list of significant positions and then plots the result.
-```{r}
 # Combine all unique selected positions into one vector
 all_bh_pos = unlist(bh_sel_pos) %>%
   unname() %>%
@@ -1174,6 +915,3 @@ ggplot(bh_df, aes(x=Method, y=Total, fill=Selection)) +
        x='Method',
        y='Number of Selected Significant Positions') +
   theme_light()
-```
-
-The ability of the Benjamini-Hochberg procedure to limit false positives is immediately apparent by looking at the plot, as the number of incorrect position selections is significantly less than the number of correct position selections. Further, the number of incorrect position selections after the Bonferroni correction are significantly less than those from the stepwise selection using either criterion (Mallows Cp or BIC) before or after Box Cox transform. However, the number of false positives is greater than that of the Bonferroni correction. Where the Benjamini-Hochberg procedure excels over the Bonferroni correction in this case is the number of false negatives, as the Benjamini-Hochberg procedure number of correct position selections is greater than that of the Bonferroni correction. Yet, the number of correct position selections is still less than those from the stepwise selection using either criterion (Mallows Cp or BIC) before or after Box Cox transform, though this is expected as a consequence of the Benjamini-Hochberg procedure attempting to control false discovery rate.
